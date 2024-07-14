@@ -15,3 +15,4 @@
     5. try to show the multiple choice questions in csv/json
     6. try to add Google Advertisement
     7. try to apply Leitner System
+3. 安裝Android Studio
