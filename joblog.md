@@ -1,4 +1,4 @@
-# 2024-07-15 Day 1
+# 2024-07-14 Day 1
 1. 決定要做的項目及所用language/library：
     1. mobile app
         1. Flutter
@@ -16,3 +16,7 @@
     6. try to add Google Advertisement
     7. try to apply Leitner System
 3. 安裝Android Studio
+
+# 2024-07-15 Day 2
+1. nodejs，選用pdf2json，因為文件較細，最後更新日期亦更近
+2. 只完成了讀取目錄的部份
