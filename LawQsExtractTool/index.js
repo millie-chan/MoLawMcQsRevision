@@ -46,6 +46,8 @@ var processLawPDFJson = (pdfData) => {
       }
     }).filter(text => text.length > 0)
   );
+  //console.log(pageArr[94]);
+  //process.exit(-1);
 
   // process table of content
   let tableOfContentPage = pageArr[1];
@@ -80,7 +82,8 @@ var processLawPDFJson = (pdfData) => {
   });
 
   // process normal pages
-  for (let i = 1; i < 2; i++) {
+  for (let i = 0; i < lawQsObjArr.length; i++) {
+  //for (let i = 2; i < 3; i++) {
     var currentLaw = lawQsObjArr[i];
     currentLaw.qsArr = [];
     var lastPageNum = pageArr.length - 2;
@@ -99,9 +102,13 @@ var processLawPDFJson = (pdfData) => {
           let text = currentPage[j];
           if (isHeader) {
             if (/[0-9]+\)/.test(text)) {
+              var qsPrefix = text;
+              if (j > 0 && /^[0-9]+$/.test(currentPage[j - 1])) {
+                qsPrefix = currentPage[j - 1] + qsPrefix;
+              }
               isHeader = false;
               isQs = true;
-              currentLaw.qsArr.push({qsPrefix: text, qs: "", ansArr: [], ans: "", explanation: ""});
+              currentLaw.qsArr.push({qsPrefix, qs: "", ansArr: [], ans: "", explanation: ""});
             } else if (text == "答案") {
               pageNum--;
               isAnsPage = true;
@@ -119,6 +126,11 @@ var processLawPDFJson = (pdfData) => {
           } else if (isQs) {
             currentQs.qs = currentQs.qs + text;
           } else {
+            if ((j < currentPage.length - 1) && /^[0-9]+$/.test(text) && /[0-9]+\)/.test(currentPage[j + 1])) {
+              currentPage[j + 1] = text + currentPage[j + 1];
+              currentPage[j] = "";
+              continue;
+            }
             currentQs.ansArr[currentQs.ansArr.length - 1] = currentQs.ansArr[currentQs.ansArr.length - 1] + text;
           }
         }
@@ -142,20 +154,28 @@ var processLawPDFJson = (pdfData) => {
             currentQs.ans = qsAns;
           } else if (currentQs != null) {
             currentQs.explanation = currentQs.explanation + text;
+          } else if (/^[0-9]+$/.test(text) && j < currentPage.length - 1) {
+            let qsNum = text;
+            let qsAns = currentPage[j + 1];
+            j++;
+            currentQs = currentLaw.qsArr[Number(qsNum) - 1];
+            currentQs.ans = qsAns;
           } else {
-            console.error("something went wrong", text);
+            console.error("something went wrong", text, j, currentPage);
+            process.exit(-1);
           }
         }
       }
     }
   }
-  return currentLaw;
+  return lawQsObjArr;
 }
 
 var exportToFile = (destPath, str) => {
   fs.writeFile(
     destPath,
-    str
+    str,
+    (err) => err && console.log(err)
   );
 }
 
