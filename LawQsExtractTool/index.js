@@ -46,7 +46,7 @@ var processLawPDFJson = (pdfData) => {
       }
     }).filter(text => text.length > 0)
   );
-  //console.log(pageArr[94]);
+  //console.log(pageArr[129]);
   //process.exit(-1);
 
   // process table of content
@@ -146,20 +146,20 @@ var processLawPDFJson = (pdfData) => {
             continue;
           }
           
-          if (/^[0-9]+\s+[A-Z]{1}/.test(text)) {
+          if (/^[0-9]+\s+[A-Z]{1}$/.test(text)) {
             let matches = text.match(/([0-9]+)\s+([A-Z]{1})/);
             let qsNum = matches[1];
             let qsAns = matches[2];
             currentQs = currentLaw.qsArr[Number(qsNum) - 1];
             currentQs.ans = qsAns;
-          } else if (currentQs != null) {
-            currentQs.explanation = currentQs.explanation + text;
-          } else if (/^[0-9]+$/.test(text) && j < currentPage.length - 1) {
+          } else if (/^[0-9]+$/.test(text) && j < currentPage.length - 1 && /^[A-Z]{1}$/.test(currentPage[j + 1])) {
             let qsNum = text;
             let qsAns = currentPage[j + 1];
             j++;
             currentQs = currentLaw.qsArr[Number(qsNum) - 1];
             currentQs.ans = qsAns;
+          } else if (currentQs != null) {
+            currentQs.explanation = currentQs.explanation + text;
           } else {
             console.error("something went wrong", text, j, currentPage);
             process.exit(-1);
