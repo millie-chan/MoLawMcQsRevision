@@ -32,3 +32,11 @@
 # 2024-07-18
 1. 解決了抽取答案的bug
 2. 開始閱讀android studio教學
+
+# 2024-07-19
+1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-1-pathway-1?hl=zh-tw
+2. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-1-pathway-2?hl=zh-tw
+
+# 2024-07-20
+1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-1-pathway-3
+2. 將教學內容的component應用到顯示問題、答案及載入背景圖片
