@@ -7,12 +7,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -37,16 +46,18 @@ class MainActivity : ComponentActivity() {
   }
 }
 
-
 @Composable
 fun MainContainer(modifier: Modifier = Modifier) {
-  Scaffold(modifier = modifier.fillMaxSize(),
+  var currentPage by remember {
+    mutableStateOf(1)
+  }
+  Scaffold(
+    modifier = modifier.fillMaxSize(),
     contentColor = Color.Black,
     containerColor = Color.White,
     topBar = {
-      LawTitle(
-        name = "《中華人民共和國憲法》",
-        modifier = modifier
+      Text(
+        text = stringResource(R.string.app_title_in_top_bar)
       )
     },
     bottomBar = {
@@ -54,8 +65,74 @@ fun MainContainer(modifier: Modifier = Modifier) {
         text = "廣告",
         modifier = modifier.fillMaxWidth(),
         textAlign = TextAlign.Center)
-    }) { innerPadding ->
+    }
+  ) { innerPadding ->
     BackgroundImage(modifier)
+    when (currentPage) {
+      1 -> MenuPageContainer(modifier.padding(innerPadding)) { currentPage = 2 }
+      2-> LawQsPageContainer(modifier.padding(innerPadding))
+    }
+  }
+}
+
+@Composable
+fun MenuPageContainer(modifier: Modifier = Modifier, switchPage: () -> Unit = {}) {
+  Box(
+    modifier = modifier
+      .fillMaxSize()
+      .wrapContentSize(Alignment.Center)
+  ) {
+    Column(
+      modifier = modifier,
+      horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+      ReviewModeButton(
+        stringResource(R.string.revision_mode1),
+        {},
+        modifier
+      )
+      ReviewModeButton(
+        stringResource(R.string.revision_mode2),
+        {
+          val qsIndex = (1..6).random()
+        //The mutableStateOf() function returns an observable
+        //var result by remember { mutableStateOf(1) }
+          switchPage()
+        },
+        modifier
+      )
+      ReviewModeButton(
+        stringResource(R.string.revision_mode3),
+        {},
+        modifier
+      )
+
+    }
+  }
+
+}
+
+@Composable
+fun ReviewModeButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Button(
+    modifier = modifier.padding(vertical = 5.dp),
+    onClick = onClick
+  ) {
+    Text(text)
+  }
+}
+
+@Composable
+fun LawQsPageContainer(modifier: Modifier = Modifier) {
+  Scaffold(modifier = modifier.fillMaxSize(),
+    topBar = {
+      LawTitle(
+        name = "《中華人民共和國憲法》",
+        modifier = modifier
+      )
+    },
+    containerColor = Color.Transparent
+  ) { innerPadding ->
     Column (
       modifier = modifier.padding(15.dp)
     ) {

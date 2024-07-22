@@ -35,8 +35,15 @@
 
 # 2024-07-19
 1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-1-pathway-1?hl=zh-tw
-2. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-1-pathway-2?hl=zh-tw
 
 # 2024-07-20
+1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-1-pathway-2?hl=zh-tw
+
+# 2024-07-21
 1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-1-pathway-3
 2. 將教學內容的component應用到顯示問題、答案及載入背景圖片
+
+# 2024-07-22
+1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-2-pathway-1
+2. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-2-pathway-2
+3. 參考教學，加入按鈕並使跳轉到另一Composable

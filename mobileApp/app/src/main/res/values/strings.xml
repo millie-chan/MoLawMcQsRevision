@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">MO Law MCQ Revision</string>
     <string name="correct_result_text">答對了</string>
+    <string name="revision_mode1">按順序溫習</string>
+    <string name="revision_mode2">隨機抽出</string>
+    <string name="revision_mode3">萊特納系統法</string>
+    <string name="app_title_in_top_bar">430法律題溫習</string>
 </resources>
