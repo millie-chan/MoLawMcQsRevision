@@ -47,3 +47,6 @@
 1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-2-pathway-1
 2. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-2-pathway-2
 3. 參考教學，加入按鈕並使跳轉到另一Composable
+
+# 2924-07-23
+1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-2-pathway-3

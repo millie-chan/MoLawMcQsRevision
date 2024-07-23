@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -52,7 +56,7 @@ fun MainContainer(modifier: Modifier = Modifier) {
     mutableStateOf(1)
   }
   Scaffold(
-    modifier = modifier.fillMaxSize(),
+    modifier = modifier.statusBarsPadding().fillMaxSize(),
     contentColor = Color.Black,
     containerColor = Color.White,
     topBar = {
@@ -83,16 +87,16 @@ fun MenuPageContainer(modifier: Modifier = Modifier, switchPage: () -> Unit = {}
       .wrapContentSize(Alignment.Center)
   ) {
     Column(
-      modifier = modifier,
+      modifier = modifier.verticalScroll(rememberScrollState()),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
       ReviewModeButton(
-        stringResource(R.string.revision_mode1),
+        R.string.revision_mode1,
         {},
         modifier
       )
       ReviewModeButton(
-        stringResource(R.string.revision_mode2),
+        R.string.revision_mode2,
         {
           val qsIndex = (1..6).random()
         //The mutableStateOf() function returns an observable
@@ -102,7 +106,7 @@ fun MenuPageContainer(modifier: Modifier = Modifier, switchPage: () -> Unit = {}
         modifier
       )
       ReviewModeButton(
-        stringResource(R.string.revision_mode3),
+        R.string.revision_mode3,
         {},
         modifier
       )
@@ -113,7 +117,7 @@ fun MenuPageContainer(modifier: Modifier = Modifier, switchPage: () -> Unit = {}
 }
 
 @Composable
-fun ReviewModeButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ReviewModeButton(@StringRes text: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
   Button(
     modifier = modifier.padding(vertical = 5.dp),
     onClick = onClick
