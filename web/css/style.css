@@ -35,6 +35,12 @@ body {
 
 .hidden { display: none !important; }
 
+.hint {
+  font-size: 13px;
+  color: #7b8794;
+  margin: 4px 0 0;
+}
+
 .error-msg { color: #c0392b; }
 
 .btn {
@@ -59,12 +65,182 @@ body {
 
 .btn-primary:hover { background: #1d4ed8; }
 
+.btn-ghost {
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #7b8794;
+}
+
+.btn-ghost:hover { color: #c0392b; }
+
+/* ==================== 計劃選擇 ==================== */
+.plan-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (min-width: 600px) {
+  .plan-buttons { grid-template-columns: repeat(3, 1fr); }
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 16px;
+  border: 1px solid #cbd2d9;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.plan-card:hover {
+  border-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+}
+
+.plan-card strong { font-size: 20px; color: #2563eb; }
+.plan-card span { font-size: 14px; color: #52606d; }
+.plan-card .plan-detail { font-size: 12px; color: #9aa5b1; }
+
+/* ==================== 首頁 ==================== */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.home-header h2 { margin: 0 0 4px; font-size: 18px; }
+
+/* ==================== 儀表盤 ==================== */
+.dashboard {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.dash-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.dash-percent {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dash-meta {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.dash-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dash-bar-fill {
+  height: 100%;
+  background: #fff;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* ==================== 分組區塊 ==================== */
+.group-section { margin-bottom: 24px; }
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #52606d;
+  margin: 0 0 10px;
+  padding-left: 4px;
+}
+
+.group-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.group-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid #e4e7eb;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.group-item.clickable { cursor: pointer; }
+.group-item.clickable:hover { border-color: #2563eb; background: #f0f6ff; }
+
+.group-item.is-due { border-color: #2563eb; background: #f0f6ff; }
+.group-item.is-done { opacity: 0.55; }
+
+.group-info { flex: 1; min-width: 0; }
+
+.group-title { font-weight: 600; font-size: 15px; }
+.group-meta { font-size: 13px; color: #7b8794; margin-top: 2px; }
+
+.group-progress {
+  height: 4px;
+  background: #e4e7eb;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.group-progress-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.group-item.is-done .group-progress-fill { background: #16a34a; }
+
+.group-status {
+  font-size: 13px;
+  color: #52606d;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+
+.status-due    { color: #2563eb; font-weight: 600; font-size: 13px; }
+.status-wait   { color: #7b8794; font-size: 13px; }
+.status-done   { color: #16a34a; font-size: 13px; }
+
+/* ==================== 答題 ==================== */
 .quiz-meta {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
   color: #7b8794;
   margin-bottom: 12px;
+}
+
+.q-source {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: #9aa5b1;
 }
 
 .question {
@@ -79,9 +255,7 @@ body {
   margin: 0 0 16px;
 }
 
-.options li {
-  margin-bottom: 10px;
-}
+.options li { margin-bottom: 10px; }
 
 .option {
   display: block;
@@ -123,6 +297,75 @@ body {
 .feedback.ok { background: #ecfdf5; color: #15803d; }
 .feedback.ng { background: #fef2f2; color: #b91c1c; }
 
-.quiz-actions { text-align: right; }
+.explanation {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+  background: #fffbeb;
+  color: #92400e;
+  margin-bottom: 16px;
+  border-left: 3px solid #f59e0b;
+}
 
+.quiz-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* ==================== 結果 ==================== */
 #result p { margin: 8px 0; }
+
+.verdict-ok { color: #16a34a; }
+.verdict-ng { color: #dc2626; }
+
+.wrong-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e4e7eb;
+}
+
+.wrong-list {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.wrong-item {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border-left: 3px solid #dc2626;
+  margin-bottom: 10px;
+}
+
+.wrong-question {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2933;
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
+
+.wrong-answer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.wrong-yours { color: #b91c1c; }
+.wrong-correct { color: #15803d; font-weight: 600; }
+
+.wrong-explanation {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #52606d;
+  padding-top: 6px;
+  border-top: 1px dashed #fca5a5;
+  margin-top: 6px;
+}

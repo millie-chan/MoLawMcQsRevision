@@ -10,7 +10,7 @@
   <main class="app">
     <header class="app-header">
       <h1>430法律刷題</h1>
-      <p class="subtitle">階段 2：分組 + 複習排程</p>
+      <p class="subtitle">Leitner 間隔複習</p>
     </header>
 
     <!-- loading -->
@@ -56,7 +56,18 @@
         </div>
         <button id="btn-reset" class="btn btn-ghost">重置進度</button>
       </div>
-      <ul id="group-list" class="group-list"></ul>
+
+      <div class="dashboard">
+        <div class="dash-row">
+          <div class="dash-percent" id="dash-percent">0%</div>
+          <div class="dash-meta" id="dash-meta"></div>
+        </div>
+        <div class="dash-bar">
+          <div class="dash-bar-fill" id="dash-bar"></div>
+        </div>
+      </div>
+
+      <div id="group-list"></div>
     </section>
 
     <!-- 答題 -->
@@ -69,6 +80,7 @@
       <h2 class="question" id="q-text"></h2>
       <ul class="options" id="q-options"></ul>
       <div class="feedback hidden" id="q-feedback"></div>
+      <div class="explanation hidden" id="q-explanation"></div>
       <div class="quiz-actions">
         <button id="btn-next" class="btn btn-primary hidden">下一題</button>
       </div>
@@ -80,7 +92,14 @@
       <p>答對 <strong id="r-correct">0</strong> / <strong id="r-total">0</strong></p>
       <p>正確率 <strong id="r-accuracy">0%</strong></p>
       <p class="hint" id="r-next"></p>
+
+      <div id="wrong-section" class="wrong-section hidden">
+        <h3 class="section-title">❌ 錯題回顧 (<span id="wrong-count">0</span>)</h3>
+        <div id="wrong-list" class="wrong-list"></div>
+      </div>
+
       <div class="quiz-actions">
+        <button id="btn-redo-wrong" class="btn hidden">重做錯題</button>
         <button id="btn-back-home" class="btn btn-primary">返回組列表</button>
       </div>
     </section>

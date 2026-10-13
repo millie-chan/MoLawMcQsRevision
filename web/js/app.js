@@ -9,9 +9,9 @@ import { storage } from './storage.js';
 // 狀態
 // ============================================================
 const state = {
-  questions: [],   // 扁平題庫
-  progress: null,  // { plan, totalQuestions, intervals, groups, createdAt }
-  session: null    // { groupId, queue, index, correct, answered }
+  questions: [],
+  progress: null,
+  session: null
 };
 
 // ============================================================
@@ -31,6 +31,9 @@ const el = {
   homeSummary: $('home-summary'),
   groupList: $('group-list'),
   btnReset: $('btn-reset'),
+  dashPercent: $('dash-percent'),
+  dashMeta: $('dash-meta'),
+  dashBar: $('dash-bar'),
 
   quiz: $('quiz'),
   qSource: $('q-source'),
@@ -40,6 +43,7 @@ const el = {
   qText: $('q-text'),
   qOptions: $('q-options'),
   qFeedback: $('q-feedback'),
+  qExplanation: $('q-explanation'),
   btnNext: $('btn-next'),
 
   result: $('result'),
@@ -48,6 +52,10 @@ const el = {
   rTotal: $('r-total'),
   rAccuracy: $('r-accuracy'),
   rNext: $('r-next'),
+  wrongSection: $('wrong-section'),
+  wrongCount: $('wrong-count'),
+  wrongList: $('wrong-list'),
+  btnRedoWrong: $('btn-redo-wrong'),
   btnBackHome: $('btn-back-home')
 };
 
@@ -151,60 +159,151 @@ function choosePlan(days) {
 }
 
 // ============================================================
+// 統計
+// ============================================================
+function computeStats(progress) {
+  const today = startOfDay(new Date());
+  let dueToday = 0;
+  let overdue = 0;
+  let completed = 0;
+  let waiting = 0;
+
+  const totalStages = progress.groups.length * progress.intervals.length;
+  let doneStages = 0;
+
+  progress.groups.forEach((g) => {
+    if (g.completed) {
+      completed++;
+      doneStages += progress.intervals.length;
+      return;
+    }
+    doneStages += g.currentStage;
+
+    if (isDueToday(g)) {
+      dueToday++;
+      if (g.currentStage > 0 && g.nextReviewDate) {
+        const target = startOfDay(new Date(g.nextReviewDate));
+        if (target < today) overdue++;
+      }
+    } else {
+      waiting++;
+    }
+  });
+
+  const progressPercent =
+    totalStages > 0 ? Math.round((doneStages / totalStages) * 100) : 0;
+
+  return { dueToday, overdue, completed, waiting, progressPercent };
+}
+
+// ============================================================
 // 首頁
 // ============================================================
 function renderHome() {
   const p = state.progress;
+  const stats = computeStats(p);
   const perGroup = Math.ceil(p.totalQuestions / p.groups.length);
+
   el.homeSummary.textContent =
     `計劃 ${p.plan} 天 · ${p.groups.length} 組 · 每組約 ${perGroup} 題 · 總題數 ${p.totalQuestions}`;
 
+  el.dashPercent.textContent = stats.progressPercent + '%';
+  el.dashBar.style.width = stats.progressPercent + '%';
+  const overdueText = stats.overdue > 0 ? ` · 逾期 ${stats.overdue} 組` : '';
+  el.dashMeta.textContent =
+    `已完成 ${stats.completed} / ${p.groups.length} 組 · 今日待複習 ${stats.dueToday} 組${overdueText}`;
+
   el.groupList.innerHTML = '';
+
+  const due = [];
+  const waiting = [];
+  const done = [];
+
   p.groups.forEach((g) => {
-    const due = isDueToday(g);
-    const countdown = getCountdown(g);
-
-    const li = document.createElement('li');
-    li.className = 'group-item';
-    if (g.completed) li.classList.add('is-done');
-    else if (due) li.classList.add('is-due');
-
-    const statusText = g.completed
-      ? '✅'
-      : due
-        ? '▶ 開始'
-        : countdown;
-
-    li.innerHTML = `
-      <div class="group-info">
-        <div class="group-title">第 ${g.groupId + 1} 組</div>
-        <div class="group-meta">${g.questionIds.length} 題 · ${getStageLabel(g, p.intervals)}</div>
-      </div>
-      <div class="group-status">${statusText}</div>
-    `;
-
-    if (!g.completed) {
-      li.classList.add('clickable');
-      li.addEventListener('click', () => startQuiz(g.groupId));
-    }
-
-    el.groupList.appendChild(li);
+    if (g.completed) done.push(g);
+    else if (isDueToday(g)) due.push(g);
+    else waiting.push(g);
   });
+
+  waiting.sort(
+    (a, b) => new Date(a.nextReviewDate) - new Date(b.nextReviewDate)
+  );
+
+  renderSection('📌 今日待複習', due, 'due');
+  renderSection('⏳ 排程中', waiting, 'waiting');
+  renderSection('✅ 已完成', done, 'done');
+}
+
+function renderSection(title, groups, kind) {
+  if (groups.length === 0) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'group-section';
+
+  const h = document.createElement('h3');
+  h.className = 'section-title';
+  h.textContent = `${title} (${groups.length})`;
+  wrap.appendChild(h);
+
+  const ul = document.createElement('ul');
+  ul.className = 'group-list';
+  groups.forEach((g) => ul.appendChild(buildGroupItem(g, kind)));
+  wrap.appendChild(ul);
+
+  el.groupList.appendChild(wrap);
+}
+
+function buildGroupItem(g, kind) {
+  const p = state.progress;
+  const li = document.createElement('li');
+  li.className = `group-item is-${kind}`;
+
+  const stagesDone = g.completed ? p.intervals.length : g.currentStage;
+  const stagesTotal = p.intervals.length;
+  const pct = stagesTotal > 0 ? (stagesDone / stagesTotal) * 100 : 0;
+
+  let statusHTML;
+  if (g.completed) {
+    statusHTML = '<span class="status-done">✅ 完成</span>';
+  } else if (kind === 'due') {
+    statusHTML = '<span class="status-due">▶ 開始</span>';
+  } else {
+    statusHTML = `<span class="status-wait">${getCountdown(g)}</span>`;
+  }
+
+  li.innerHTML = `
+    <div class="group-info">
+      <div class="group-title">第 ${g.groupId + 1} 組</div>
+      <div class="group-meta">${g.questionIds.length} 題 · ${getStageLabel(g, p.intervals)}</div>
+      <div class="group-progress">
+        <div class="group-progress-fill" style="width:${pct}%"></div>
+      </div>
+    </div>
+    <div class="group-status">${statusHTML}</div>
+  `;
+
+  if (!g.completed) {
+    li.classList.add('clickable');
+    li.addEventListener('click', () => startQuiz(g.groupId));
+  }
+  return li;
 }
 
 // ============================================================
 // 開始某組
 // ============================================================
-function startQuiz(groupId) {
+function startQuiz(groupId, questionIds = null, mode = 'normal') {
   const g = state.progress.groups.find((x) => x.groupId === groupId);
   if (!g || g.completed) return;
 
   state.session = {
     groupId,
-    queue: [...g.questionIds],
+    mode,
+    queue: questionIds ? [...questionIds] : [...g.questionIds],
     index: 0,
     correct: 0,
-    answered: false
+    answered: false,
+    records: []
   };
 
   el.qTotal.textContent = state.session.queue.length;
@@ -227,6 +326,8 @@ function renderQuestion() {
 
   el.qFeedback.classList.add('hidden');
   el.qFeedback.textContent = '';
+  el.qExplanation.classList.add('hidden');
+  el.qExplanation.textContent = '';
   el.btnNext.classList.add('hidden');
 
   el.qOptions.innerHTML = '';
@@ -251,6 +352,12 @@ function onSelect(selectedIndex) {
   if (isCorrect) s.correct += 1;
   el.qCorrect.textContent = s.correct;
 
+  s.records.push({
+    questionId: q.id,
+    selected: selectedIndex,
+    correct: isCorrect
+  });
+
   const buttons = el.qOptions.querySelectorAll('.option');
   buttons.forEach((btn, i) => {
     btn.disabled = true;
@@ -264,6 +371,11 @@ function onSelect(selectedIndex) {
   el.qFeedback.classList.remove('hidden');
   el.qFeedback.classList.toggle('ok', isCorrect);
   el.qFeedback.classList.toggle('ng', !isCorrect);
+
+  if (!isCorrect && q.explanation) {
+    el.qExplanation.textContent = '📖 ' + q.explanation;
+    el.qExplanation.classList.remove('hidden');
+  }
 
   el.btnNext.classList.remove('hidden');
   el.btnNext.textContent =
@@ -290,17 +402,25 @@ function finishGroup() {
   const correct = s.correct;
   const accuracy = total > 0 ? correct / total : 0;
   const passed = accuracy >= 0.9;
+  const isReview = s.mode === 'review';
 
-  applyAnswerResult(g, state.progress.intervals, correct, total);
-  storage.save(state.progress);
+  if (!isReview) {
+    applyAnswerResult(g, state.progress.intervals, correct, total);
+    storage.save(state.progress);
+  }
 
-  el.rVerdict.textContent = passed ? '🎉 通過！' : '⚠️ 未達 90%';
+  el.rVerdict.textContent = isReview
+    ? (passed ? '✅ 複習完成' : '⚠️ 仍有錯題')
+    : (passed ? '🎉 通過！' : '⚠️ 未達 90%');
   el.rVerdict.className = passed ? 'verdict-ok' : 'verdict-ng';
+
   el.rCorrect.textContent = correct;
   el.rTotal.textContent = total;
   el.rAccuracy.textContent = (accuracy * 100).toFixed(1) + '%';
 
-  if (passed) {
+  if (isReview) {
+    el.rNext.textContent = '（複習模式不影響進度）';
+  } else if (passed) {
     if (g.completed) {
       el.rNext.textContent = '本組所有複習已完成 ✅';
     } else {
@@ -314,8 +434,62 @@ function finishGroup() {
     el.rNext.textContent = '未達 90%，本組狀態未變更。明天可以再試一次。';
   }
 
-  state.session = null;
+  renderWrongList(s);
   show('result');
+}
+
+// ============================================================
+// 錯題回顧
+// ============================================================
+function renderWrongList(session) {
+  const wrongRecords = session.records.filter((r) => !r.correct);
+
+  if (wrongRecords.length === 0) {
+    el.wrongSection.classList.add('hidden');
+    el.btnRedoWrong.classList.add('hidden');
+    return;
+  }
+
+  el.wrongSection.classList.remove('hidden');
+  el.wrongCount.textContent = wrongRecords.length;
+  el.wrongList.innerHTML = '';
+
+  wrongRecords.forEach((rec) => {
+    const q = state.questions[rec.questionId];
+    const item = document.createElement('div');
+    item.className = 'wrong-item';
+
+    const correctLetter = String.fromCharCode(65 + q.answer);
+    const selectedLetter =
+      rec.selected >= 0 ? String.fromCharCode(65 + rec.selected) : '—';
+
+    item.innerHTML = `
+      <div class="wrong-question">${q.source} · ${q.question}</div>
+      <div class="wrong-answer">
+        <span class="wrong-yours">你的答案：${selectedLetter}</span>
+        <span class="wrong-correct">正確答案：${correctLetter}. ${q.options[q.answer]}</span>
+      </div>
+      ${q.explanation ? `<div class="wrong-explanation">📖 ${q.explanation}</div>` : ''}
+    `;
+    el.wrongList.appendChild(item);
+  });
+
+  if (session.mode === 'normal') {
+    el.btnRedoWrong.classList.remove('hidden');
+    el.btnRedoWrong.dataset.groupId = session.groupId;
+    el.btnRedoWrong.dataset.ids = JSON.stringify(
+      wrongRecords.map((r) => r.questionId)
+    );
+  } else {
+    el.btnRedoWrong.classList.add('hidden');
+  }
+}
+
+function redoWrong() {
+  const groupId = parseInt(el.btnRedoWrong.dataset.groupId, 10);
+  const ids = JSON.parse(el.btnRedoWrong.dataset.ids || '[]');
+  if (ids.length === 0) return;
+  startQuiz(groupId, ids, 'review');
 }
 
 // ============================================================
@@ -344,6 +518,7 @@ el.btnBackHome.addEventListener('click', () => {
   show('home');
 });
 el.btnReset.addEventListener('click', resetProgress);
+el.btnRedoWrong.addEventListener('click', redoWrong);
 
 // 啟動
 init();

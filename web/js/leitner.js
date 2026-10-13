@@ -40,8 +40,6 @@ export function createGroups(totalQuestions, studyDays) {
     groups.push({
       groupId: i,
       questionIds: Array.from({ length: end - start }, (_, k) => start + k),
-      // currentStage: 0 = 新題未做；k = 已通過 (k-1) 次複習，正等待第 k 次
-      // > intervals.length 表示已完成
       currentStage: 0,
       nextReviewDate: null,
       completed: false,
@@ -81,7 +79,6 @@ export function applyAnswerResult(group, intervals, correct, total) {
         calcNextReviewDate(group.currentStage, intervals).toISOString();
     }
   } else {
-    // 未達 90%，狀態不動，隔天可重試
     group.nextReviewDate = addDays(new Date(), 1).toISOString();
   }
 
@@ -101,9 +98,14 @@ export function getCountdown(group) {
   const target = startOfDay(new Date(group.nextReviewDate));
   const diffDays = Math.round((target - today) / 86400000);
 
-  if (diffDays < 0) return `已逾期 ${-diffDays} 天`;
-  if (diffDays === 0) return '今天可複習';
-  return `${diffDays} 天後`;
+  if (diffDays < 0) return `逾期 ${-diffDays} 天`;
+  if (diffDays === 0) return '今天';
+  if (diffDays === 1) return '明天';
+  if (diffDays <= 6) return `${diffDays} 天後`;
+
+  const mm = String(target.getMonth() + 1).padStart(2, '0');
+  const dd = String(target.getDate()).padStart(2, '0');
+  return `${mm}/${dd}`;
 }
 
 export function isDueToday(group) {
