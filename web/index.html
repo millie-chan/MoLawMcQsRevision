@@ -3,60 +3,89 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leitner 刷題</title>
+  <title>430法律刷題</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <main class="app">
     <header class="app-header">
-      <h1>Leitner 刷題</h1>
-      <p class="subtitle">階段 1：題庫載入 + 線性答題</p>
+      <h1>430法律刷題</h1>
+      <p class="subtitle">階段 2：分組 + 複習排程</p>
     </header>
 
-    <!-- 載入中 -->
+    <!-- loading -->
     <section id="loading" class="panel">
       <p>題庫載入中…</p>
     </section>
 
-    <!-- 載入錯誤 -->
+    <!-- error -->
     <section id="error" class="panel hidden">
       <p class="error-msg" id="error-msg"></p>
       <button id="btn-retry" class="btn">重試</button>
     </section>
 
-    <!-- 開始畫面 -->
-    <section id="start" class="panel hidden">
-      <p>共 <strong id="total-count">0</strong> 題。</p>
-      <button id="btn-start" class="btn btn-primary">開始作答</button>
+    <!-- 計劃選擇 -->
+    <section id="plan-select" class="panel hidden">
+      <h2>選擇學習計劃</h2>
+      <p class="hint">選定天數後系統會自動分組，每組依 Leitner 間隔複習。</p>
+      <div class="plan-buttons">
+        <button class="plan-card" data-plan="15">
+          <strong>15 天</strong>
+          <span>7 組 · 複習 4 次</span>
+          <span class="plan-detail">間隔 1 / 2 / 4 / 8 天</span>
+        </button>
+        <button class="plan-card" data-plan="30">
+          <strong>30 天</strong>
+          <span>14 組 · 複習 5 次</span>
+          <span class="plan-detail">間隔 1 / 2 / 4 / 8 / 16 天</span>
+        </button>
+        <button class="plan-card" data-plan="60">
+          <strong>60 天</strong>
+          <span>28 組 · 複習 6 次</span>
+          <span class="plan-detail">間隔 1 / 2 / 4 / 8 / 16 / 32 天</span>
+        </button>
+      </div>
     </section>
 
-    <!-- 答題畫面 -->
+    <!-- 組列表 -->
+    <section id="home" class="panel hidden">
+      <div class="home-header">
+        <div>
+          <h2>學習進度</h2>
+          <p class="hint" id="home-summary"></p>
+        </div>
+        <button id="btn-reset" class="btn btn-ghost">重置進度</button>
+      </div>
+      <ul id="group-list" class="group-list"></ul>
+    </section>
+
+    <!-- 答題 -->
     <section id="quiz" class="panel hidden">
       <div class="quiz-meta">
         <span>第 <strong id="q-index">1</strong> / <strong id="q-total">0</strong> 題</span>
         <span>答對 <strong id="q-correct">0</strong> 題</span>
       </div>
-
+      <p class="q-source" id="q-source"></p>
       <h2 class="question" id="q-text"></h2>
-
       <ul class="options" id="q-options"></ul>
-
       <div class="feedback hidden" id="q-feedback"></div>
-
       <div class="quiz-actions">
         <button id="btn-next" class="btn btn-primary hidden">下一題</button>
       </div>
     </section>
 
-    <!-- 結果畫面 -->
+    <!-- 本組結果 -->
     <section id="result" class="panel hidden">
-      <h2>本輪結果</h2>
+      <h2 id="r-verdict">本組結果</h2>
       <p>答對 <strong id="r-correct">0</strong> / <strong id="r-total">0</strong></p>
       <p>正確率 <strong id="r-accuracy">0%</strong></p>
-      <button id="btn-restart" class="btn btn-primary">再答一次</button>
+      <p class="hint" id="r-next"></p>
+      <div class="quiz-actions">
+        <button id="btn-back-home" class="btn btn-primary">返回組列表</button>
+      </div>
     </section>
   </main>
 
-  <script src="js/app.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>

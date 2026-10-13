@@ -1,25 +1,39 @@
-// ================== 狀態 ==================
+import {
+  createGroups, applyAnswerResult,
+  getStageLabel, getCountdown, isDueToday,
+  startOfDay
+} from './leitner.js';
+import { storage } from './storage.js';
+
+// ============================================================
+// 狀態
+// ============================================================
 const state = {
-  questions: [],
-  index: 0,
-  correctCount: 0,
-  answered: false
+  questions: [],   // 扁平題庫
+  progress: null,  // { plan, totalQuestions, intervals, groups, createdAt }
+  session: null    // { groupId, queue, index, correct, answered }
 };
 
-// ================== DOM ==================
+// ============================================================
+// DOM
+// ============================================================
 const $ = (id) => document.getElementById(id);
-
 const el = {
   loading: $('loading'),
   error: $('error'),
   errorMsg: $('error-msg'),
   btnRetry: $('btn-retry'),
 
-  start: $('start'),
-  totalCount: $('total-count'),
-  btnStart: $('btn-start'),
+  planSelect: $('plan-select'),
+  planButtons: document.querySelectorAll('[data-plan]'),
+
+  home: $('home'),
+  homeSummary: $('home-summary'),
+  groupList: $('group-list'),
+  btnReset: $('btn-reset'),
 
   quiz: $('quiz'),
+  qSource: $('q-source'),
   qIndex: $('q-index'),
   qTotal: $('q-total'),
   qCorrect: $('q-correct'),
@@ -29,28 +43,26 @@ const el = {
   btnNext: $('btn-next'),
 
   result: $('result'),
+  rVerdict: $('r-verdict'),
   rCorrect: $('r-correct'),
   rTotal: $('r-total'),
   rAccuracy: $('r-accuracy'),
-  btnRestart: $('btn-restart')
+  rNext: $('r-next'),
+  btnBackHome: $('btn-back-home')
 };
 
-// ================== 畫面切換 ==================
+const SCREENS = ['loading', 'error', 'planSelect', 'home', 'quiz', 'result'];
 function show(name) {
-  ['loading', 'error', 'start', 'quiz', 'result'].forEach((k) => {
-    el[k].classList.toggle('hidden', k !== name);
-  });
+  SCREENS.forEach((k) => el[k].classList.toggle('hidden', k !== name));
 }
 
-// ================== 題庫格式轉換 ==================
-// 原始格式： [{ title, pageNum, qsArr: [{ qsPrefix, qs, ansArr, ans, explanation }] }]
-// 目標格式： [{ id, question, options, answer, explanation, source }]
-
+// ============================================================
+// 題庫載入
+// ============================================================
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 function stripOptionPrefix(text) {
-  // 去掉 "A. "、"B)"、"C、" 之類的前綴
-  return text.replace(/^\s*[A-Fa-f][\.\)、\s]+\s*/, '').trim();
+  return String(text).replace(/^\s*[A-Fa-f][\.\)、\s]+\s*/, '').trim();
 }
 
 function normalize(raw) {
@@ -62,20 +74,17 @@ function normalize(raw) {
     (subject.qsArr || []).forEach((q) => {
       const options = (q.ansArr || []).map(stripOptionPrefix);
       const answerIndex = LETTERS.indexOf((q.ans || '').toUpperCase().trim());
-
       if (answerIndex < 0 || answerIndex >= options.length) {
         console.warn('跳過無效題目：', q.qs);
         return;
       }
-
       flat.push({
         id: counter++,
         question: q.qs,
         options,
         answer: answerIndex,
         explanation: q.explanation || '',
-        source: title,
-        qsPrefix: q.qsPrefix || ''
+        source: title
       });
     });
   });
@@ -83,52 +92,137 @@ function normalize(raw) {
   return flat;
 }
 
-// ================== 載入題庫 ==================
 async function loadQuestions() {
+  const res = await fetch('data/2023.json', { cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const raw = await res.json();
+  if (!Array.isArray(raw) || raw.length === 0) throw new Error('題庫格式錯誤或為空');
+  const flat = normalize(raw);
+  if (flat.length === 0) throw new Error('題庫正規化後為 0 題');
+  state.questions = flat;
+  console.log(`✅ 題庫載入完成：${flat.length} 題，來自 ${raw.length} 個科目`);
+}
+
+// ============================================================
+// 啟動
+// ============================================================
+async function init() {
   show('loading');
   try {
-    const res = await fetch('data/2023.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const raw = await res.json();
-
-    if (!Array.isArray(raw) || raw.length === 0) {
-      throw new Error('題庫格式錯誤或為空');
-    }
-
-    const flat = normalize(raw);
-    if (flat.length === 0) {
-      throw new Error('題庫正規化後為 0 題，請檢查 ans 欄位');
-    }
-
-    state.questions = flat;
-    el.totalCount.textContent = flat.length;
-    console.log(`✅ 題庫載入完成：${flat.length} 題，來自 ${raw.length} 個科目`);
-    show('start');
+    await loadQuestions();
   } catch (err) {
     el.errorMsg.textContent =
       '題庫載入失敗：' + err.message +
       '（請確認用 http(s) 開啟，不能直接雙擊 index.html）';
     show('error');
+    return;
+  }
+
+  const saved = storage.load();
+  if (saved && Array.isArray(saved.groups) && saved.groups.length > 0) {
+    state.progress = saved;
+    renderHome();
+    show('home');
+  } else {
+    show('planSelect');
   }
 }
 
-// ================== 開始作答 ==================
-function startQuiz() {
-  state.index = 0;
-  state.correctCount = 0;
-  state.answered = false;
-  el.qTotal.textContent = state.questions.length;
+// ============================================================
+// 選擇計劃
+// ============================================================
+function choosePlan(days) {
+  if (state.progress) {
+    if (!confirm('已存在學習進度，重新選擇會清除目前進度。確定嗎？')) return;
+    storage.clear();
+  }
+
+  const { groups, intervals } = createGroups(state.questions.length, days);
+  state.progress = {
+    plan: days,
+    totalQuestions: state.questions.length,
+    intervals,
+    groups,
+    createdAt: new Date().toISOString()
+  };
+  storage.save(state.progress);
+  renderHome();
+  show('home');
+}
+
+// ============================================================
+// 首頁
+// ============================================================
+function renderHome() {
+  const p = state.progress;
+  const perGroup = Math.ceil(p.totalQuestions / p.groups.length);
+  el.homeSummary.textContent =
+    `計劃 ${p.plan} 天 · ${p.groups.length} 組 · 每組約 ${perGroup} 題 · 總題數 ${p.totalQuestions}`;
+
+  el.groupList.innerHTML = '';
+  p.groups.forEach((g) => {
+    const due = isDueToday(g);
+    const countdown = getCountdown(g);
+
+    const li = document.createElement('li');
+    li.className = 'group-item';
+    if (g.completed) li.classList.add('is-done');
+    else if (due) li.classList.add('is-due');
+
+    const statusText = g.completed
+      ? '✅'
+      : due
+        ? '▶ 開始'
+        : countdown;
+
+    li.innerHTML = `
+      <div class="group-info">
+        <div class="group-title">第 ${g.groupId + 1} 組</div>
+        <div class="group-meta">${g.questionIds.length} 題 · ${getStageLabel(g, p.intervals)}</div>
+      </div>
+      <div class="group-status">${statusText}</div>
+    `;
+
+    if (!g.completed) {
+      li.classList.add('clickable');
+      li.addEventListener('click', () => startQuiz(g.groupId));
+    }
+
+    el.groupList.appendChild(li);
+  });
+}
+
+// ============================================================
+// 開始某組
+// ============================================================
+function startQuiz(groupId) {
+  const g = state.progress.groups.find((x) => x.groupId === groupId);
+  if (!g || g.completed) return;
+
+  state.session = {
+    groupId,
+    queue: [...g.questionIds],
+    index: 0,
+    correct: 0,
+    answered: false
+  };
+
+  el.qTotal.textContent = state.session.queue.length;
   show('quiz');
   renderQuestion();
 }
 
-// ================== 渲染當前題 ==================
+// ============================================================
+// 答題
+// ============================================================
 function renderQuestion() {
-  const q = state.questions[state.index];
-  state.answered = false;
+  const s = state.session;
+  const q = state.questions[s.queue[s.index]];
+  s.answered = false;
 
-  el.qIndex.textContent = state.index + 1;
-  el.qCorrect.textContent = state.correctCount;
+  el.qIndex.textContent = s.index + 1;
+  el.qCorrect.textContent = s.correct;
+  el.qSource.textContent = q.source;
   el.qText.textContent = q.question;
 
   el.qFeedback.classList.add('hidden');
@@ -147,17 +241,16 @@ function renderQuestion() {
   });
 }
 
-// ================== 選擇答案 ==================
 function onSelect(selectedIndex) {
-  if (state.answered) return;
-  state.answered = true;
+  const s = state.session;
+  if (s.answered) return;
+  s.answered = true;
 
-  const q = state.questions[state.index];
+  const q = state.questions[s.queue[s.index]];
   const isCorrect = selectedIndex === q.answer;
-  if (isCorrect) state.correctCount += 1;
-  el.qCorrect.textContent = state.correctCount;
+  if (isCorrect) s.correct += 1;
+  el.qCorrect.textContent = s.correct;
 
-  // 停用所有選項 + 標色
   const buttons = el.qOptions.querySelectorAll('.option');
   buttons.forEach((btn, i) => {
     btn.disabled = true;
@@ -165,7 +258,6 @@ function onSelect(selectedIndex) {
     if (i === selectedIndex && !isCorrect) btn.classList.add('is-wrong');
   });
 
-  // 回饋文字
   el.qFeedback.textContent = isCorrect
     ? '✅ 答對了'
     : `❌ 答錯了，正確答案是 ${String.fromCharCode(65 + q.answer)}`;
@@ -175,36 +267,83 @@ function onSelect(selectedIndex) {
 
   el.btnNext.classList.remove('hidden');
   el.btnNext.textContent =
-    state.index === state.questions.length - 1 ? '看結果' : '下一題';
+    s.index === s.queue.length - 1 ? '完成本組' : '下一題';
 }
 
-// ================== 下一題 / 結束 ==================
 function nextQuestion() {
-  if (state.index < state.questions.length - 1) {
-    state.index += 1;
+  const s = state.session;
+  if (s.index < s.queue.length - 1) {
+    s.index += 1;
     renderQuestion();
   } else {
-    showResult();
+    finishGroup();
   }
 }
 
-// ================== 結果 ==================
-function showResult() {
-  const total = state.questions.length;
-  const correct = state.correctCount;
-  const accuracy = total ? (correct / total) * 100 : 0;
+// ============================================================
+// 本組結果
+// ============================================================
+function finishGroup() {
+  const s = state.session;
+  const g = state.progress.groups.find((x) => x.groupId === s.groupId);
+  const total = s.queue.length;
+  const correct = s.correct;
+  const accuracy = total > 0 ? correct / total : 0;
+  const passed = accuracy >= 0.9;
 
+  applyAnswerResult(g, state.progress.intervals, correct, total);
+  storage.save(state.progress);
+
+  el.rVerdict.textContent = passed ? '🎉 通過！' : '⚠️ 未達 90%';
+  el.rVerdict.className = passed ? 'verdict-ok' : 'verdict-ng';
   el.rCorrect.textContent = correct;
   el.rTotal.textContent = total;
-  el.rAccuracy.textContent = accuracy.toFixed(1) + '%';
+  el.rAccuracy.textContent = (accuracy * 100).toFixed(1) + '%';
+
+  if (passed) {
+    if (g.completed) {
+      el.rNext.textContent = '本組所有複習已完成 ✅';
+    } else {
+      const next = new Date(g.nextReviewDate);
+      const diff = Math.round(
+        (startOfDay(next) - startOfDay(new Date())) / 86400000
+      );
+      el.rNext.textContent = `已晉級到複習 ${g.currentStage} / ${state.progress.intervals.length}，${diff} 天後再複習。`;
+    }
+  } else {
+    el.rNext.textContent = '未達 90%，本組狀態未變更。明天可以再試一次。';
+  }
+
+  state.session = null;
   show('result');
 }
 
-// ================== 綁定 ==================
-el.btnStart.addEventListener('click', startQuiz);
-el.btnNext.addEventListener('click', nextQuestion);
-el.btnRetry.addEventListener('click', loadQuestions);
-el.btnRestart.addEventListener('click', () => show('start'));
+// ============================================================
+// 重置
+// ============================================================
+function resetProgress() {
+  if (!confirm('確定要清除所有學習進度嗎？此操作無法復原。')) return;
+  storage.clear();
+  state.progress = null;
+  state.session = null;
+  show('planSelect');
+}
 
-// ================== 啟動 ==================
-loadQuestions();
+// ============================================================
+// 綁定事件
+// ============================================================
+el.planButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    choosePlan(parseInt(btn.dataset.plan, 10));
+  });
+});
+el.btnRetry.addEventListener('click', init);
+el.btnNext.addEventListener('click', nextQuestion);
+el.btnBackHome.addEventListener('click', () => {
+  renderHome();
+  show('home');
+});
+el.btnReset.addEventListener('click', resetProgress);
+
+// 啟動
+init();
