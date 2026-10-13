@@ -1,9 +1,9 @@
 import {
   createGroups, applyAnswerResult,
   getStageLabel, getCountdown, isDueToday,
-  startOfDay
+  startOfDay, formatDate, computeStreak
 } from './leitner.js';
-import { storage } from './storage.js';
+import { storage, migrateProgress } from './storage.js';
 
 // ============================================================
 // 狀態
@@ -26,14 +26,21 @@ const el = {
 
   planSelect: $('plan-select'),
   planButtons: document.querySelectorAll('[data-plan]'),
+  btnImportEmpty: $('btn-import-empty'),
 
   home: $('home'),
   homeSummary: $('home-summary'),
   groupList: $('group-list'),
   btnReset: $('btn-reset'),
+  btnExport: $('btn-export'),
+  btnImport: $('btn-import'),
   dashPercent: $('dash-percent'),
   dashMeta: $('dash-meta'),
   dashBar: $('dash-bar'),
+
+  statStreak: $('stat-streak'),
+  statTotal: $('stat-total'),
+  statAccuracy: $('stat-accuracy'),
 
   quiz: $('quiz'),
   qSource: $('q-source'),
@@ -56,7 +63,9 @@ const el = {
   wrongCount: $('wrong-count'),
   wrongList: $('wrong-list'),
   btnRedoWrong: $('btn-redo-wrong'),
-  btnBackHome: $('btn-back-home')
+  btnBackHome: $('btn-back-home'),
+
+  fileInput: $('file-input')
 };
 
 const SCREENS = ['loading', 'error', 'planSelect', 'home', 'quiz', 'result'];
@@ -126,9 +135,10 @@ async function init() {
     return;
   }
 
-  const saved = storage.load();
-  if (saved && Array.isArray(saved.groups) && saved.groups.length > 0) {
+  const saved = migrateProgress(storage.load());
+  if (saved) {
     state.progress = saved;
+    storage.save(state.progress);
     renderHome();
     show('home');
   } else {
@@ -151,7 +161,10 @@ function choosePlan(days) {
     totalQuestions: state.questions.length,
     intervals,
     groups,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    activityLog: [],
+    totalAnswered: 0,
+    totalCorrect: 0
   };
   storage.save(state.progress);
   renderHome();
@@ -213,6 +226,15 @@ function renderHome() {
   el.dashMeta.textContent =
     `已完成 ${stats.completed} / ${p.groups.length} 組 · 今日待複習 ${stats.dueToday} 組${overdueText}`;
 
+  // 統計卡片
+  el.statStreak.textContent = computeStreak(p.activityLog);
+  el.statTotal.textContent = p.totalAnswered;
+  el.statAccuracy.textContent =
+    p.totalAnswered > 0
+      ? Math.round((p.totalCorrect / p.totalAnswered) * 100) + '%'
+      : '—';
+
+  // 分組
   el.groupList.innerHTML = '';
 
   const due = [];
@@ -404,10 +426,21 @@ function finishGroup() {
   const passed = accuracy >= 0.9;
   const isReview = s.mode === 'review';
 
+  // 累計統計（兩種模式都算）
+  state.progress.totalAnswered += total;
+  state.progress.totalCorrect += correct;
+
+  // 記錄活動日（用於連續天數）
+  const today = formatDate(new Date());
+  if (!state.progress.activityLog.includes(today)) {
+    state.progress.activityLog.push(today);
+  }
+
   if (!isReview) {
     applyAnswerResult(g, state.progress.intervals, correct, total);
-    storage.save(state.progress);
   }
+
+  storage.save(state.progress);
 
   el.rVerdict.textContent = isReview
     ? (passed ? '✅ 複習完成' : '⚠️ 仍有錯題')
@@ -493,6 +526,65 @@ function redoWrong() {
 }
 
 // ============================================================
+// 匯出 / 匯入
+// ============================================================
+function exportProgress() {
+  if (!state.progress) return;
+
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    progress: state.progress
+  };
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: 'application/json'
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `430law-progress-${formatDate(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function triggerImport() {
+  el.fileInput.value = '';
+  el.fileInput.click();
+}
+
+async function handleImportFile(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const raw = parsed.progress || parsed;
+    const migrated = migrateProgress(raw);
+    if (!migrated) {
+      alert('匯入失敗：檔案格式不正確。');
+      return;
+    }
+
+    if (state.progress) {
+      if (!confirm('匯入會覆蓋目前進度，確定嗎？')) return;
+    }
+
+    state.progress = migrated;
+    storage.save(state.progress);
+    renderHome();
+    show('home');
+    alert('✅ 進度已匯入。');
+  } catch (err) {
+    console.error(err);
+    alert('匯入失敗：' + err.message);
+  }
+}
+
+// ============================================================
 // 重置
 // ============================================================
 function resetProgress() {
@@ -519,6 +611,10 @@ el.btnBackHome.addEventListener('click', () => {
 });
 el.btnReset.addEventListener('click', resetProgress);
 el.btnRedoWrong.addEventListener('click', redoWrong);
+el.btnExport.addEventListener('click', exportProgress);
+el.btnImport.addEventListener('click', triggerImport);
+el.btnImportEmpty.addEventListener('click', triggerImport);
+el.fileInput.addEventListener('change', handleImportFile);
 
 // 啟動
 init();

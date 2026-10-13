@@ -45,6 +45,10 @@
           <span class="plan-detail">間隔 1 / 2 / 4 / 8 / 16 / 32 天</span>
         </button>
       </div>
+
+      <div class="plan-extra">
+        <button id="btn-import-empty" class="btn btn-ghost">📥 匯入進度</button>
+      </div>
     </section>
 
     <!-- 組列表 -->
@@ -54,7 +58,11 @@
           <h2>學習進度</h2>
           <p class="hint" id="home-summary"></p>
         </div>
-        <button id="btn-reset" class="btn btn-ghost">重置進度</button>
+        <div class="home-actions">
+          <button id="btn-export" class="btn btn-ghost" title="匯出進度">📤</button>
+          <button id="btn-import" class="btn btn-ghost" title="匯入進度">📥</button>
+          <button id="btn-reset" class="btn btn-ghost">重置</button>
+        </div>
       </div>
 
       <div class="dashboard">
@@ -64,6 +72,21 @@
         </div>
         <div class="dash-bar">
           <div class="dash-bar-fill" id="dash-bar"></div>
+        </div>
+      </div>
+
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-streak">0</div>
+          <div class="stat-label">連續學習天數</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">累計答題</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-accuracy">—</div>
+          <div class="stat-label">總正確率</div>
         </div>
       </div>
 
@@ -103,6 +126,9 @@
         <button id="btn-back-home" class="btn btn-primary">返回組列表</button>
       </div>
     </section>
+
+    <!-- 隱藏的文件選擇器 -->
+    <input type="file" id="file-input" accept=".json,application/json" hidden />
   </main>
 
   <script type="module" src="js/app.js"></script>
