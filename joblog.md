@@ -48,5 +48,14 @@
 2. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-2-pathway-2
 3. 參考教學，加入按鈕並使跳轉到另一Composable
 
-# 2924-07-23
+# 2024-07-23
 1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-2-pathway-3
+
+# 2024-07-24
+1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-3-pathway-1
+
+# 2024-07-25
+1. 看完https://developer.android.com/courses/pathways/android-basics-compose-unit-3-pathway-2
+
+# 2026-10-13
+1. 沒有學android的雄心壯志了，改為用deepseek生成網頁
