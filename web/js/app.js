@@ -110,7 +110,7 @@ function normalize(raw) {
 }
 
 async function loadQuestions() {
-  const res = await fetch('data/2023.json', { cache: 'no-store' });
+  const res = await fetch('data/2026.json', { cache: 'no-store' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const raw = await res.json();
   if (!Array.isArray(raw) || raw.length === 0) throw new Error('題庫格式錯誤或為空');
