@@ -2,8 +2,16 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>430法律刷題</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="430刷題" />
+
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -48,6 +56,7 @@
 
       <div class="plan-extra">
         <button id="btn-import-empty" class="btn btn-ghost">📥 匯入進度</button>
+        <button id="btn-install-empty" class="btn btn-ghost hidden">📱 加到主屏幕</button>
       </div>
     </section>
 
@@ -59,6 +68,7 @@
           <p class="hint" id="home-summary"></p>
         </div>
         <div class="home-actions">
+          <button id="btn-install" class="btn btn-ghost hidden" title="加到主屏幕">📱</button>
           <button id="btn-export" class="btn btn-ghost" title="匯出進度">📤</button>
           <button id="btn-import" class="btn btn-ghost" title="匯入進度">📥</button>
           <button id="btn-reset" class="btn btn-ghost">重置</button>
@@ -90,6 +100,17 @@
         </div>
       </div>
 
+      <div class="search-box">
+        <input
+          type="search"
+          id="search-input"
+          class="search-input"
+          placeholder="🔍 搜尋題目或科目…"
+          autocomplete="off"
+        />
+      </div>
+
+      <div id="search-results" class="search-results hidden"></div>
       <div id="group-list"></div>
     </section>
 
@@ -126,6 +147,18 @@
         <button id="btn-back-home" class="btn btn-primary">返回組列表</button>
       </div>
     </section>
+
+    <!-- 題目詳情 Modal -->
+    <div id="q-detail-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-backdrop" id="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close" aria-label="關閉">×</button>
+        <p class="modal-source" id="modal-source"></p>
+        <h3 class="modal-question" id="modal-question"></h3>
+        <ul class="modal-options" id="modal-options"></ul>
+        <div class="modal-explanation hidden" id="modal-explanation"></div>
+      </div>
+    </div>
 
     <!-- 隱藏的文件選擇器 -->
     <input type="file" id="file-input" accept=".json,application/json" hidden />

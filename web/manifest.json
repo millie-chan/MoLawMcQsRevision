@@ -1,0 +1,20 @@
+{
+  "name": "430法律刷題",
+  "short_name": "430刷題",
+  "description": "Leitner 間隔複習刷題工具",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f6f8",
+  "theme_color": "#2563eb",
+  "lang": "zh-Hant",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
