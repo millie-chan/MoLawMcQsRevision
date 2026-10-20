@@ -27,6 +27,7 @@ const el = {
   planSelect: $('plan-select'),
   planButtons: document.querySelectorAll('[data-plan]'),
   btnImportEmpty: $('btn-import-empty'),
+  btnInstallEmpty: $('btn-install-empty'),
 
   home: $('home'),
   homeSummary: $('home-summary'),
@@ -34,6 +35,7 @@ const el = {
   btnReset: $('btn-reset'),
   btnExport: $('btn-export'),
   btnImport: $('btn-import'),
+  btnInstall: $('btn-install'),
   dashPercent: $('dash-percent'),
   dashMeta: $('dash-meta'),
   dashBar: $('dash-bar'),
@@ -41,6 +43,9 @@ const el = {
   statStreak: $('stat-streak'),
   statTotal: $('stat-total'),
   statAccuracy: $('stat-accuracy'),
+
+  searchInput: $('search-input'),
+  searchResults: $('search-results'),
 
   quiz: $('quiz'),
   qSource: $('q-source'),
@@ -64,6 +69,14 @@ const el = {
   wrongList: $('wrong-list'),
   btnRedoWrong: $('btn-redo-wrong'),
   btnBackHome: $('btn-back-home'),
+
+  modal: $('q-detail-modal'),
+  modalBackdrop: $('modal-backdrop'),
+  modalClose: $('modal-close'),
+  modalSource: $('modal-source'),
+  modalQuestion: $('modal-question'),
+  modalOptions: $('modal-options'),
+  modalExplanation: $('modal-explanation'),
 
   fileInput: $('file-input')
 };
@@ -226,7 +239,6 @@ function renderHome() {
   el.dashMeta.textContent =
     `已完成 ${stats.completed} / ${p.groups.length} 組 · 今日待複習 ${stats.dueToday} 組${overdueText}`;
 
-  // 統計卡片
   el.statStreak.textContent = computeStreak(p.activityLog);
   el.statTotal.textContent = p.totalAnswered;
   el.statAccuracy.textContent =
@@ -234,7 +246,6 @@ function renderHome() {
       ? Math.round((p.totalCorrect / p.totalAnswered) * 100) + '%'
       : '—';
 
-  // 分組
   el.groupList.innerHTML = '';
 
   const due = [];
@@ -254,6 +265,14 @@ function renderHome() {
   renderSection('📌 今日待複習', due, 'due');
   renderSection('⏳ 排程中', waiting, 'waiting');
   renderSection('✅ 已完成', done, 'done');
+
+  // 若搜尋框有內容，重新執行搜尋以保持視圖一致
+  if (el.searchInput.value.trim()) {
+    performSearch(el.searchInput.value);
+  } else {
+    el.groupList.classList.remove('hidden');
+    el.searchResults.classList.add('hidden');
+  }
 }
 
 function renderSection(title, groups, kind) {
@@ -309,6 +328,126 @@ function buildGroupItem(g, kind) {
     li.addEventListener('click', () => startQuiz(g.groupId));
   }
   return li;
+}
+
+// ============================================================
+// 搜尋
+// ============================================================
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+function highlightHTML(text, keyword) {
+  if (!keyword) return escapeHTML(text);
+  const lower = text.toLowerCase();
+  const k = keyword.toLowerCase();
+  const idx = lower.indexOf(k);
+  if (idx < 0) return escapeHTML(text);
+  return (
+    escapeHTML(text.slice(0, idx)) +
+    '<mark>' +
+    escapeHTML(text.slice(idx, idx + k.length)) +
+    '</mark>' +
+    escapeHTML(text.slice(idx + k.length))
+  );
+}
+
+function performSearch(rawKeyword) {
+  const keyword = rawKeyword.trim();
+  if (!keyword) {
+    el.searchResults.classList.add('hidden');
+    el.searchResults.innerHTML = '';
+    el.groupList.classList.remove('hidden');
+    return;
+  }
+
+  const k = keyword.toLowerCase();
+  const results = state.questions.filter(
+    (q) =>
+      q.question.toLowerCase().includes(k) ||
+      q.source.toLowerCase().includes(k)
+  );
+
+  el.groupList.classList.add('hidden');
+  el.searchResults.classList.remove('hidden');
+  el.searchResults.innerHTML = '';
+
+  if (results.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'search-empty';
+    empty.textContent = `沒有找到包含「${keyword}」的題目。`;
+    el.searchResults.appendChild(empty);
+    return;
+  }
+
+  const count = document.createElement('p');
+  count.className = 'search-count';
+  count.textContent = `找到 ${results.length} 題`;
+  el.searchResults.appendChild(count);
+
+  const LIMIT = 100;
+  results.slice(0, LIMIT).forEach((q) => {
+    const item = document.createElement('div');
+    item.className = 'search-item';
+    item.innerHTML = `
+      <div class="search-item-source">${escapeHTML(q.source)}</div>
+      <div class="search-item-question">${highlightHTML(q.question, keyword)}</div>
+    `;
+    item.addEventListener('click', () => showQuestionDetail(q));
+    el.searchResults.appendChild(item);
+  });
+
+  if (results.length > LIMIT) {
+    const more = document.createElement('p');
+    more.className = 'search-count';
+    more.textContent = `還有 ${results.length - LIMIT} 題未顯示，請輸入更精確的關鍵字。`;
+    el.searchResults.appendChild(more);
+  }
+}
+
+// ============================================================
+// 題目詳情 Modal
+// ============================================================
+function showQuestionDetail(q) {
+  el.modalSource.textContent = q.source;
+  el.modalQuestion.textContent = q.question;
+  el.modalOptions.innerHTML = '';
+
+  q.options.forEach((text, i) => {
+    const li = document.createElement('li');
+    li.className = 'modal-option';
+    if (i === q.answer) li.classList.add('is-answer');
+    const letter = document.createElement('span');
+    letter.className = 'opt-letter';
+    letter.textContent = String.fromCharCode(65 + i) + '.';
+    const txt = document.createElement('span');
+    txt.className = 'opt-text';
+    txt.textContent = text;
+    li.appendChild(letter);
+    li.appendChild(txt);
+    el.modalOptions.appendChild(li);
+  });
+
+  if (q.explanation) {
+    el.modalExplanation.textContent = '📖 ' + q.explanation;
+    el.modalExplanation.classList.remove('hidden');
+  } else {
+    el.modalExplanation.classList.add('hidden');
+  }
+
+  el.modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeQuestionDetail() {
+  el.modal.classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
 // ============================================================
@@ -426,11 +565,9 @@ function finishGroup() {
   const passed = accuracy >= 0.9;
   const isReview = s.mode === 'review';
 
-  // 累計統計（兩種模式都算）
   state.progress.totalAnswered += total;
   state.progress.totalCorrect += correct;
 
-  // 記錄活動日（用於連續天數）
   const today = formatDate(new Date());
   if (!state.progress.activityLog.includes(today)) {
     state.progress.activityLog.push(today);
@@ -596,6 +733,88 @@ function resetProgress() {
 }
 
 // ============================================================
+// PWA 安裝
+// ============================================================
+let deferredInstallPrompt = null;
+
+function isStandalone() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
+
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function showInstallButtons() {
+  el.btnInstall.classList.remove('hidden');
+  el.btnInstallEmpty.classList.remove('hidden');
+}
+
+function hideInstallButtons() {
+  el.btnInstall.classList.add('hidden');
+  el.btnInstallEmpty.classList.add('hidden');
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (!isStandalone()) showInstallButtons();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  hideInstallButtons();
+  console.log('✅ PWA installed');
+});
+
+async function handleInstallClick() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    console.log('Install outcome:', outcome);
+    if (outcome === 'accepted') hideInstallButtons();
+    deferredInstallPrompt = null;
+    return;
+  }
+  if (isIOS()) {
+    alert(
+      '在 Safari 中點擊底部「分享」按鈕 → 選擇「加入主畫面」。'
+    );
+    return;
+  }
+  alert(
+    '請使用瀏覽器地址欄右側的「安裝」圖標，或從瀏覽器菜單中選擇「安裝 430法律刷題」。'
+  );
+}
+
+// iOS 不支援 beforeinstallprompt，手動顯示
+if (isIOS() && !isStandalone()) {
+  showInstallButtons();
+}
+if (isStandalone()) {
+  hideInstallButtons();
+}
+
+// ============================================================
+// Service Worker 註冊
+// ============================================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('sw.js')
+      .then((reg) => {
+        console.log('✅ SW registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('SW registration failed:', err);
+      });
+  });
+}
+
+// ============================================================
 // 綁定事件
 // ============================================================
 el.planButtons.forEach((btn) => {
@@ -606,6 +825,7 @@ el.planButtons.forEach((btn) => {
 el.btnRetry.addEventListener('click', init);
 el.btnNext.addEventListener('click', nextQuestion);
 el.btnBackHome.addEventListener('click', () => {
+  el.searchInput.value = '';
   renderHome();
   show('home');
 });
@@ -615,6 +835,26 @@ el.btnExport.addEventListener('click', exportProgress);
 el.btnImport.addEventListener('click', triggerImport);
 el.btnImportEmpty.addEventListener('click', triggerImport);
 el.fileInput.addEventListener('change', handleImportFile);
+
+el.btnInstall.addEventListener('click', handleInstallClick);
+el.btnInstallEmpty.addEventListener('click', handleInstallClick);
+
+// 搜尋：防抖
+let searchTimer = null;
+el.searchInput.addEventListener('input', (e) => {
+  const v = e.target.value;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => performSearch(v), 120);
+});
+
+// Modal 關閉
+el.modalClose.addEventListener('click', closeQuestionDetail);
+el.modalBackdrop.addEventListener('click', closeQuestionDetail);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !el.modal.classList.contains('hidden')) {
+    closeQuestionDetail();
+  }
+});
 
 // 啟動
 init();
