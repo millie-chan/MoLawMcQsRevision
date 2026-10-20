@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const PDFParser = require("pdf2json"); 
 const pdfParser = new PDFParser();
+const tableOfContent2026 = require("./table_of_content_2026.json")
 
 var init = () => {
   var args = process.argv;
@@ -33,7 +34,7 @@ var loadPDF = (path, destPath) => {
 var processLawPDFJson = (pdfData) => {
   let lawQsObjArr = [];
   let isTitle = true;
-  let pageArr = pdfData.Pages.map(page =>
+  let pageArr = pdfData.Pages.map(page => 
     page.Texts.map(text => {
       var textArr = text.R.map(r => 
         decodeURIComponent(r.T).trim()
@@ -48,6 +49,10 @@ var processLawPDFJson = (pdfData) => {
   );
   //console.log(pageArr[129]);
   //process.exit(-1);
+
+  if (pageArr[1].includes('©2026')) {
+    pageArr[1] = tableOfContent2026
+  }
 
   // process table of content
   let tableOfContentPage = pageArr[1];
